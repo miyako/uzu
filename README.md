@@ -34,12 +34,12 @@ This 4D component manages the process lifecycle: resolving models (either a Hugg
 
 1. Add this project as a 4D component (or copy it into `Components/` of your host database).
 2. Build or download the `uzu` CLI binary from [trymirai/uzu](https://github.com/trymirai/uzu) and place it at `RESOURCES/bin/{platform}/cli` in your project.
-3. Call `cs.uzu.new(...)` from `onStartup` (see below), and `cs.uzu.new().terminate()` from `onExit`.
+3. Call `cs.uzu.uzu.new(...)` from `onStartup` (see below), and `cs.uzu.new().terminate()` from `onExit`.
 
 ## Basic usage
 
 ```4d
-var $uzu : cs.uzu
+var $uzu : cs.uzu.uzu
 var $homeFolder : 4D.Folder
 $homeFolder:=Folder(fk home folder).folder(".uzu")
 
@@ -56,14 +56,14 @@ $options:={model: "trymirai/Qwen3.5-0.8B-L"; port: $port}
 var $huggingfaces : cs.event.huggingfaces
 $huggingfaces:=cs.event.huggingfaces.new([])  //empty: let uzu handle the download itself
 
-$uzu:=cs.uzu.new($port; $huggingfaces; $homeFolder; $options; $event)
+$uzu:=cs.cs..uzu.new($port; $huggingfaces; $homeFolder; $options; $event)
 ```
 
 On termination (e.g. in `onExit`):
 
 ```4d
-var $uzu : cs.uzu
-$uzu:=cs.uzu.new()
+var $uzu : cs.uzu.uzu
+$uzu:=cs.uzu.uzu.new()
 $uzu.terminate()
 ```
 

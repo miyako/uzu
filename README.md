@@ -34,7 +34,7 @@ This 4D component manages the process lifecycle: resolving models (either a Hugg
 
 1. Add this project as a 4D component (or copy it into `Components/` of your host database).
 2. Build or download the `uzu` CLI binary from [trymirai/uzu](https://github.com/trymirai/uzu) and place it at `RESOURCES/bin/{platform}/cli` in your project.
-3. Call `cs.uzu.uzu.new(...)` from `onStartup` (see below), and `cs.uzu.new().terminate()` from `onExit`.
+3. Call `cs.uzu.uzu.new(...)` from `onStartup` (see below), and `cs.uzu.uzu.new().terminate()` from `onExit`.
 
 ## Basic usage
 

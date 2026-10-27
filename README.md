@@ -33,8 +33,34 @@ This 4D component manages the process lifecycle: resolving models (either a Hugg
 ## Installation
 
 1. Add this project as a 4D component (or copy it into `Components/` of your host database).
-2. Build or download the `uzu` CLI binary from [trymirai/uzu](https://github.com/trymirai/uzu) and place it at `RESOURCES/bin/{platform}/cli` in your project.
+2. The repository bundles the macOS CLI at `uzu/Resources/bin/macOS/cli`; published components include it. For a custom build, place the executable at `RESOURCES/bin/{platform}/cli` in your project.
 3. Call `cs.uzu.uzu.new(...)` from `onStartup` (see below), and `cs.uzu.uzu.new().terminate()` from `onExit`.
+
+## Updating and publishing the server
+
+Run **Actions > Update server > Run workflow** on the default branch. Select the upstream `trymirai/uzu` tag or commit (`source_ref`, initially `0.6.13`) and the component version increment (`patch`, `minor`, or `major`).
+
+The workflow builds the `cli` and `cli-tools` Cargo packages from source for Apple Silicon and Intel, combines each into a universal macOS executable, and checks `cli server --help`. Source builds are intentional: current official release archives contain `mirai`, not the `cli server` executable used by this component. The selected upstream revision must still provide both Cargo packages and the compatible server command.
+
+Build and runtime requirements follow the selected upstream revision. In particular, `0.6.13` compiles Metal 4 shaders targeting macOS 26.4; do not assume that a universal executable preserves compatibility with older macOS versions.
+
+The executables are Developer ID signed with hardened runtime and a secure timestamp, verified, and submitted to Apple's notary service inside a DMG. Only an **Accepted** submission can proceed. The workflow staples and validates the DMG ticket and uploads it as the `server-notarized` artifact. Standalone Mach-O executables cannot have tickets stapled directly; their signatures are registered by notarization, while the DMG carries the offline ticket.
+
+After notarization succeeds, the workflow commits both executables to the default branch, recording the exact upstream source SHA in the commit message, then calls **Publish** to increment the component version and build, sign, notarize, and release the updated 4D component. This is an explicit reusable-workflow call: pushes made with `GITHUB_TOKEN` do not trigger another push workflow. The optional self-hosted setting applies only to the 4D publish; server compilation and signing use GitHub-hosted macOS runners.
+
+Configure the same repository secrets already used by **Publish**:
+
+| Secret | Purpose |
+|---|---|
+| `APPLE_DEVELOPER_ID_CERTIFICATE` | Base64-encoded Developer ID Application certificate (`.p12`) |
+| `APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD` | Certificate import password |
+| `KEYCHAIN_PASSWORD` | Temporary signing keychain password |
+| `CODESIGN_APPLE_ID` | Developer ID Application signing identity |
+| `NOTARYTOOL_APPLE_ID` | Apple account for notarization |
+| `NOTARYTOOL_TEAM_ID` | Apple Developer team ID |
+| `NOTARYTOOL_PASSWORD` | App-specific notarization password |
+
+Repository rules must allow `github-actions[bot]` to push server and version commits to the default branch. Concurrent branch changes cause the server push to fail rather than overwrite newer work. If the component publish fails after the server commit, rerun **Publish** on the default branch; rebuilding the server is unnecessary.
 
 ## Basic usage
 

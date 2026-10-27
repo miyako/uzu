@@ -8,7 +8,7 @@ on:
       - '*/Project/Sources/**/*.4dm'
       - '*/Project/Sources/*/*.4DForm'
       - '*/Project/Sources/*.4DCatalog'
-      - '*/Project/Resources/**'
+      - '*/Resources/**'
   workflow_dispatch:
     inputs:
         use_self_hosted:
@@ -24,6 +24,18 @@ on:
           - minor 
           - major
           required: true
+  workflow_call:
+    inputs:
+      use_self_hosted:
+        type: boolean
+        default: false
+      mode:
+        type: string
+        default: patch
+
+concurrency:
+  group: publish-component
+  cancel-in-progress: false
 
 env: 
   project_path: uzu/Project/uzu.4DProject
@@ -31,8 +43,9 @@ env:
 jobs:
 
   publish:
-    if: ${{ github.event.inputs.use_self_hosted != 'true' }}
-    permissions: write-all
+    if: ${{ !inputs.use_self_hosted }}
+    permissions:
+      contents: write
     runs-on: [macos-latest]
     steps:
 
@@ -44,6 +57,9 @@ jobs:
 
       - name: checkout 
         uses: actions/checkout@v4
+        with:
+          # A reusable call must include the server commit pushed by its caller.
+          ref: ${{ github.ref_name }}
 
       - name: set version
         id: version
@@ -92,6 +108,13 @@ jobs:
           product_path: ${{ steps.build.outputs.product_path }}
           keychain: ${{ steps.keychain.outputs.KEYCHAIN_PATH }}
           
+      - name: Staple and validate notarization ticket
+        env:
+          DMG_PATH: ${{ steps.codesign.outputs.dmg_path }}
+        run: |
+          xcrun stapler staple "$DMG_PATH"
+          xcrun stapler validate "$DMG_PATH"
+
       - name: zip
         id: zip
         uses: miyako/4D/.github/actions/deployment-create-zip@v1
@@ -111,8 +134,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}    
 
   publish-locally:
-    if: ${{ github.event.inputs.use_self_hosted == 'true' }}
-    permissions: write-all
+    if: ${{ inputs.use_self_hosted }}
+    permissions:
+      contents: write
     runs-on: [self-hosted, macos]
     steps:
 
@@ -124,6 +148,8 @@ jobs:
 
       - name: checkout 
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
 
       - name: set version
         id: version
@@ -172,6 +198,13 @@ jobs:
           product_path: ${{ steps.build.outputs.product_path }}
           keychain: ${{ steps.keychain.outputs.KEYCHAIN_PATH }}
           
+      - name: Staple and validate notarization ticket
+        env:
+          DMG_PATH: ${{ steps.codesign.outputs.dmg_path }}
+        run: |
+          xcrun stapler staple "$DMG_PATH"
+          xcrun stapler validate "$DMG_PATH"
+
       - name: zip
         id: zip
         uses: miyako/4D/.github/actions/deployment-create-zip@v1

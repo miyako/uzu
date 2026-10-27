@@ -97,11 +97,18 @@ jobs:
           APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
 
+      - name: Resolve signing identity
+        id: identity
+        uses: ./.github/actions/signing-identity
+        with:
+          keychain: ${{ steps.keychain.outputs.KEYCHAIN_PATH }}
+          team_id: ${{ secrets.NOTARYTOOL_TEAM_ID }}
+
       - name: codesign
         id: codesign
         uses: miyako/4D/.github/actions/deployment-codesign-product@v1
         with: 
-          sign: ${{ secrets.CODESIGN_APPLE_ID }} 
+          sign: ${{ steps.identity.outputs.identity }}
           apple_id: ${{ secrets.NOTARYTOOL_APPLE_ID }}         
           team_id: ${{ secrets.NOTARYTOOL_TEAM_ID }}   
           password: ${{ secrets.NOTARYTOOL_PASSWORD }}
@@ -187,11 +194,18 @@ jobs:
           APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
 
+      - name: Resolve signing identity
+        id: identity
+        uses: ./.github/actions/signing-identity
+        with:
+          keychain: ${{ steps.keychain.outputs.KEYCHAIN_PATH }}
+          team_id: ${{ secrets.NOTARYTOOL_TEAM_ID }}
+
       - name: codesign
         id: codesign
         uses: miyako/4D/.github/actions/deployment-codesign-product@v1
         with: 
-          sign: ${{ secrets.CODESIGN_APPLE_ID }} 
+          sign: ${{ steps.identity.outputs.identity }}
           apple_id: ${{ secrets.NOTARYTOOL_APPLE_ID }}         
           team_id: ${{ secrets.NOTARYTOOL_TEAM_ID }}   
           password: ${{ secrets.NOTARYTOOL_PASSWORD }}

@@ -111,9 +111,16 @@ jobs:
           APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
 
+      - name: Resolve signing identity
+        id: identity
+        uses: ./.github/actions/signing-identity
+        with:
+          keychain: ${{ steps.keychain.outputs.KEYCHAIN_PATH }}
+          team_id: ${{ secrets.NOTARYTOOL_TEAM_ID }}
+
       - name: Sign and verify executables
         env:
-          SIGNING_IDENTITY: ${{ secrets.CODESIGN_APPLE_ID }}
+          SIGNING_IDENTITY: ${{ steps.identity.outputs.identity }}
           SIGNING_KEYCHAIN: ${{ steps.keychain.outputs.KEYCHAIN_PATH }}
           TEAM_ID: ${{ secrets.NOTARYTOOL_TEAM_ID }}
         run: |
@@ -132,7 +139,7 @@ jobs:
 
       - name: Package signed server
         env:
-          SIGNING_IDENTITY: ${{ secrets.CODESIGN_APPLE_ID }}
+          SIGNING_IDENTITY: ${{ steps.identity.outputs.identity }}
           SIGNING_KEYCHAIN: ${{ steps.keychain.outputs.KEYCHAIN_PATH }}
         run: |
           hdiutil create -format UDZO \

@@ -1,0 +1,35 @@
+name: Resolve signing identity
+description: Select the imported Developer ID Application certificate for the notarization team
+inputs:
+  keychain:
+    description: Keychain containing the imported signing certificate
+    required: true
+  team_id:
+    description: Apple Developer team used for notarization
+    required: true
+outputs:
+  identity:
+    description: SHA-1 fingerprint of the Developer ID Application certificate
+    value: ${{ steps.resolve.outputs.identity }}
+runs:
+  using: composite
+  steps:
+    - name: Resolve Developer ID Application identity
+      id: resolve
+      shell: bash
+      env:
+        SIGNING_KEYCHAIN: ${{ inputs.keychain }}
+        TEAM_ID: ${{ inputs.team_id }}
+      run: |
+        : "${SIGNING_KEYCHAIN:?Signing keychain is required}"
+        : "${TEAM_ID:?Apple Developer team ID is required}"
+        identity=$(security find-identity -v -p codesigning "$SIGNING_KEYCHAIN" |
+          awk -v team="$TEAM_ID" '
+            index($0, "\"Developer ID Application:") && index($0, "(" team ")\"") {
+              print $2
+            }')
+        if [[ ! "$identity" =~ ^[[:xdigit:]]{40}$ ]]; then
+          echo "::error::Expected exactly one valid Developer ID Application certificate for team $TEAM_ID in the signing keychain"
+          exit 1
+        fi
+        echo "identity=$identity" >> "$GITHUB_OUTPUT"

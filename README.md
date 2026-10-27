@@ -55,10 +55,11 @@ Configure the same repository secrets already used by **Publish**:
 | `APPLE_DEVELOPER_ID_CERTIFICATE` | Base64-encoded Developer ID Application certificate (`.p12`) |
 | `APPLE_DEVELOPER_ID_CERTIFICATE_PASSWORD` | Certificate import password |
 | `KEYCHAIN_PASSWORD` | Temporary signing keychain password |
-| `CODESIGN_APPLE_ID` | Developer ID Application signing identity |
 | `NOTARYTOOL_APPLE_ID` | Apple account for notarization |
 | `NOTARYTOOL_TEAM_ID` | Apple Developer team ID |
 | `NOTARYTOOL_PASSWORD` | App-specific notarization password |
+
+The signing identity is resolved from the imported keychain using `NOTARYTOOL_TEAM_ID`; no separate signing-identity secret is needed. The keychain must contain exactly one valid Developer ID Application identity for that team.
 
 Repository rules must allow `github-actions[bot]` to push server and version commits to the default branch. Concurrent branch changes cause the server push to fail rather than overwrite newer work. If the component publish fails after the server commit, rerun **Publish** on the default branch; rebuilding the server is unnecessary.
 

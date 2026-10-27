@@ -70,7 +70,7 @@ jobs:
               "target/aarch64-apple-darwin/release/$executable" \
               "target/x86_64-apple-darwin/release/$executable" \
               -output "dist/$executable"
-            lipo -verify_arch arm64 x86_64 "dist/$executable"
+            lipo "dist/$executable" -verify_arch arm64 x86_64
             chmod +x "dist/$executable"
           done
           dist/cli --version
@@ -127,7 +127,7 @@ jobs:
           for executable in cli cli-tools; do
             binary="uzu/Resources/bin/macOS/$executable"
             chmod +x "$binary"
-            lipo -verify_arch arm64 x86_64 "$binary"
+            lipo "$binary" -verify_arch arm64 x86_64
             codesign --force --options runtime --timestamp \
               --sign "$SIGNING_IDENTITY" --keychain "$SIGNING_KEYCHAIN" "$binary"
             codesign --verify --strict --all-architectures --verbose=2 "$binary"

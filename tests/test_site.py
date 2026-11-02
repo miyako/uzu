@@ -19,11 +19,13 @@ class Page(HTMLParser):
         self.ids = set()
         self.links = []
         self.tags = []
+        self.elements = []
         self.feed(source)
 
     def handle_starttag(self, tag, attrs):
         attrs = dict(attrs)
         self.tags.append(tag)
+        self.elements.append((tag, attrs))
         if "id" in attrs:
             if attrs["id"] in self.ids:
                 raise ValueError(f"duplicate id: {attrs['id']}")
@@ -51,6 +53,38 @@ class SiteTests(unittest.TestCase):
             for tag in ("title", "nav", "main", "footer"):
                 self.assertIn(tag, page.tags)
             self.assertEqual(page.tags.count("h1"), 1)
+            self.assertTrue(any(
+                tag == "main" and attrs.get("id") == "main"
+                and attrs.get("tabindex") == "-1"
+                for tag, attrs in page.elements
+            ))
+            self.assertTrue(any(
+                tag == "nav" and attrs.get("aria-label")
+                for tag, attrs in page.elements
+            ))
+            self.assertEqual(sum(
+                attrs.get("aria-current") == "page"
+                for _, attrs in page.elements
+            ), 1)
+            self.assertTrue(any(
+                tag == "a" and attrs.get("class") == "skip"
+                and attrs.get("href") == "#main"
+                for tag, attrs in page.elements
+            ))
+            for tag, attrs in page.elements:
+                if tag == "th":
+                    self.assertIn(attrs.get("scope"), ("row", "col"))
+            if path.name == "index.html":
+                self.assertTrue(any(
+                    attrs.get("class") == "engine-panel"
+                    and attrs.get("role") == "group"
+                    and attrs.get("aria-label")
+                    for _, attrs in page.elements
+                ))
+                self.assertIn('<div class="connection">loads</div>', source)
+                self.assertIn("HTTP / 127.0.0.1:8080", source)
+                self.assertIn("Catalog ID, Hugging Face repo or local directory", source)
+                self.assertIn('class="file-mark" aria-hidden="true">MODEL', source)
 
         for name, page in pages.items():
             for link in page.links:

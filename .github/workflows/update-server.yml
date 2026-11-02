@@ -1,24 +1,39 @@
 name: Update server
 
 on:
+  pull_request:
+    paths:
+      - .github/workflows/update-server.yml
+      - scripts/build-native.sh
+      - scripts/smoke-native.sh
+      - scripts/package-info.py
   workflow_dispatch:
     inputs:
       source_ref:
-        description: trymirai/uzu tag or commit containing the cli and cli-tools Cargo packages
+        description: Upstream main (latest source), tag, or full commit SHA
         type: string
         required: true
-        default: '0.6.13'
-      mode:
-        description: Component semantic version increment
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-        default: patch
+        default: main
+      rust_toolchain:
+        description: Dated Rust toolchain (must satisfy upstream rust-version)
+        type: string
         required: true
+        default: nightly-2026-08-10
+      publish_release:
+        description: Sign, notarize and publish (requires Apple secrets; false builds unsigned artifacts only)
+        type: boolean
+        default: false
+      publish_component:
+        description: Also publish a 4D component (requires publish_release)
+        type: boolean
+        default: false
+      mode:
+        description: Component version increment (when publishing the component)
+        type: choice
+        options: [patch, minor, major]
+        default: patch
       use_self_hosted:
-        description: Use the self-hosted runner for the subsequent component publish
+        description: Use self-hosted macOS for the optional 4D component build
         type: boolean
         default: false
 
@@ -26,7 +41,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: update-server
+  group: update-server-${{ github.ref }}
   cancel-in-progress: false
 
 defaults:
@@ -35,73 +50,104 @@ defaults:
 
 jobs:
   build:
-    if: github.ref_name == github.event.repository.default_branch
+    if: github.event_name == 'pull_request' || github.ref_name == github.event.repository.default_branch
     runs-on: macos-26
     timeout-minutes: 120
     outputs:
-      source_sha: ${{ steps.source.outputs.sha }}
+      tag: ${{ steps.source.outputs.tag }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '26.4'
+      RUST_TOOLCHAIN: ${{ inputs.rust_toolchain || 'nightly-2026-08-10' }}
     steps:
+      - name: Checkout packaging scripts
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Checkout upstream source
         uses: actions/checkout@v4
         with:
           repository: trymirai/uzu
-          ref: ${{ inputs.source_ref }}
+          ref: ${{ inputs.source_ref || 'main' }}
+          path: .upstream
           persist-credentials: false
 
-      - name: Record source revision
+      - name: Resolve release identity
         id: source
-        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-      - name: Install build prerequisites
+        env:
+          SOURCE_REF: ${{ inputs.source_ref || 'main' }}
+          PUBLISH_COMPONENT: ${{ inputs.publish_component }}
+          PUBLISH_RELEASE: ${{ inputs.publish_release }}
         run: |
+          set -euo pipefail
+          if [[ "$PUBLISH_COMPONENT" == true && "$PUBLISH_RELEASE" != true ]]; then
+            echo "::error::publish_component requires publish_release"
+            exit 1
+          fi
+          test "$(uname -m)" = arm64
+          sha=$(git -C .upstream rev-parse HEAD)
+          version=$(python3 -c 'import tomllib; print(tomllib.load(open(".upstream/Cargo.toml", "rb"))["workspace"]["package"]["version"])')
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][A-Za-z0-9.-]+)?$ ]]
+          tag="server-${version}-${sha:0:12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          printf 'Source: trymirai/uzu@%s (requested %s)\nRelease: %s\n' "$sha" "$SOURCE_REF" "$tag" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Install native build prerequisites
+        run: |
+          set -euo pipefail
+          [[ "$RUST_TOOLCHAIN" =~ ^nightly-[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]
+          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal --target aarch64-apple-darwin
           brew list cmake >/dev/null 2>&1 || brew install cmake
           xcodebuild -downloadComponent MetalToolchain
-          # Honor the toolchain selected by the upstream checkout.
-          rustup show active-toolchain
-          rustup target add aarch64-apple-darwin x86_64-apple-darwin
+          xcodebuild -version
+          xcrun --sdk macosx metal --version
+          xcrun --sdk macosx --show-sdk-version
+          rustc "+$RUST_TOOLCHAIN" -Vv
 
-      - name: Build universal executables
-        run: |
-          cargo build --locked --release --package cli --package cli-tools --target aarch64-apple-darwin
-          cargo build --locked --release --package cli --package cli-tools --target x86_64-apple-darwin
-          mkdir -p dist
-          for executable in cli cli-tools; do
-            lipo -create \
-              "target/aarch64-apple-darwin/release/$executable" \
-              "target/x86_64-apple-darwin/release/$executable" \
-              -output "dist/$executable"
-            lipo "dist/$executable" -verify_arch arm64 x86_64
-            chmod +x "dist/$executable"
-          done
-          dist/cli --version
-          dist/cli server --help
-          dist/cli-tools --help
-
-      - name: Upload unsigned executables
-        uses: actions/upload-artifact@v4
+      - name: Cache Cargo downloads
+        uses: actions/cache@v4
         with:
-          name: server-unsigned
-          path: dist/
-          if-no-files-found: error
-          retention-days: 1
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: cargo-macos-arm64-${{ env.RUST_TOOLCHAIN }}-${{ hashFiles('.upstream/Cargo.lock') }}
+          restore-keys: cargo-macos-arm64-${{ env.RUST_TOOLCHAIN }}-
 
-  update:
+      - name: Build, inspect and smoke-test actual server
+        env:
+          SOURCE_REF: ${{ inputs.source_ref || 'main' }}
+        run: bash scripts/build-native.sh .upstream dist/uzu-server-macos-arm64
+
+      - name: Preserve unsigned build (not a notarized release)
+        run: |
+          tar -czf dist/uzu-server-unsigned-macos-arm64.tar.gz -C dist uzu-server-macos-arm64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-server-unsigned
+          path: dist/uzu-server-unsigned-macos-arm64.tar.gz
+          if-no-files-found: error
+
+  sign:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_release && github.ref_name == github.event.repository.default_branch
     needs: build
     runs-on: macos-26
     timeout-minutes: 45
-    permissions:
-      contents: write
     steps:
-      - name: Checkout component
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.repository.default_branch }}
-
-      - name: Download executables
-        uses: actions/download-artifact@v4
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
         with:
-          name: server-unsigned
-          path: uzu/Resources/bin/macOS
+          name: native-server-unsigned
+          path: dist
+      - name: Restore native build with executable permissions
+        run: tar -xzf dist/uzu-server-unsigned-macos-arm64.tar.gz -C dist
 
       - name: Setup signing keychain
         id: keychain
@@ -118,44 +164,34 @@ jobs:
           keychain: ${{ steps.keychain.outputs.KEYCHAIN_PATH }}
           team_id: ${{ secrets.NOTARYTOOL_TEAM_ID }}
 
-      - name: Sign and verify executables
+      - name: Sign server and package DMG
         env:
           SIGNING_IDENTITY: ${{ steps.identity.outputs.identity }}
           SIGNING_KEYCHAIN: ${{ steps.keychain.outputs.KEYCHAIN_PATH }}
           TEAM_ID: ${{ secrets.NOTARYTOOL_TEAM_ID }}
         run: |
-          for executable in cli cli-tools; do
-            binary="uzu/Resources/bin/macOS/$executable"
-            chmod +x "$binary"
-            lipo "$binary" -verify_arch arm64 x86_64
-            codesign --force --options runtime --timestamp \
-              --sign "$SIGNING_IDENTITY" --keychain "$SIGNING_KEYCHAIN" "$binary"
-            codesign --verify --strict --all-architectures --verbose=2 "$binary"
-            codesign --display --verbose=4 "$binary" 2>&1 | grep -Fx "TeamIdentifier=$TEAM_ID"
-          done
-          uzu/Resources/bin/macOS/cli --version
-          uzu/Resources/bin/macOS/cli server --help
-          uzu/Resources/bin/macOS/cli-tools --help
-
-      - name: Package signed server
-        env:
-          SIGNING_IDENTITY: ${{ steps.identity.outputs.identity }}
-          SIGNING_KEYCHAIN: ${{ steps.keychain.outputs.KEYCHAIN_PATH }}
-        run: |
-          hdiutil create -format UDZO \
-            -srcfolder uzu/Resources/bin/macOS "$RUNNER_TEMP/uzu-server.dmg"
+          set -euo pipefail
+          binary=dist/uzu-server-macos-arm64/cli
+          codesign --force --options runtime --timestamp \
+            --sign "$SIGNING_IDENTITY" --keychain "$SIGNING_KEYCHAIN" "$binary"
+          codesign --verify --strict --all-architectures --verbose=2 "$binary"
+          codesign --display --verbose=4 "$binary" 2>&1 | grep -Fx "TeamIdentifier=$TEAM_ID"
+          bash scripts/smoke-native.sh "$binary"
+          hdiutil create -format UDZO -volname uzu-server \
+            -srcfolder dist/uzu-server-macos-arm64 dist/uzu-server-macos-arm64.dmg
           codesign --force --timestamp --sign "$SIGNING_IDENTITY" \
-            --keychain "$SIGNING_KEYCHAIN" "$RUNNER_TEMP/uzu-server.dmg"
-          codesign --verify --strict --verbose=2 "$RUNNER_TEMP/uzu-server.dmg"
+            --keychain "$SIGNING_KEYCHAIN" dist/uzu-server-macos-arm64.dmg
+          codesign --verify --strict --verbose=2 dist/uzu-server-macos-arm64.dmg
 
-      - name: Notarize server
+      - name: Notarize, staple and verify
         env:
           APPLE_ID: ${{ secrets.NOTARYTOOL_APPLE_ID }}
           TEAM_ID: ${{ secrets.NOTARYTOOL_TEAM_ID }}
           APPLE_PASSWORD: ${{ secrets.NOTARYTOOL_PASSWORD }}
         run: |
+          set -euo pipefail
           result="$RUNNER_TEMP/server-notarization.json"
-          xcrun notarytool submit "$RUNNER_TEMP/uzu-server.dmg" \
+          xcrun notarytool submit dist/uzu-server-macos-arm64.dmg \
             --apple-id "$APPLE_ID" --team-id "$TEAM_ID" --password "$APPLE_PASSWORD" \
             --wait --timeout 30m --output-format json > "$result"
           cat "$result"
@@ -165,29 +201,25 @@ jobs:
               --apple-id "$APPLE_ID" --team-id "$TEAM_ID" --password "$APPLE_PASSWORD"
             exit 1
           fi
-          xcrun stapler staple "$RUNNER_TEMP/uzu-server.dmg"
-          xcrun stapler validate "$RUNNER_TEMP/uzu-server.dmg"
+          xcrun stapler staple dist/uzu-server-macos-arm64.dmg
+          xcrun stapler validate dist/uzu-server-macos-arm64.dmg
           spctl --assess --type open --context context:primary-signature \
-            --verbose=2 "$RUNNER_TEMP/uzu-server.dmg"
+            --verbose=2 dist/uzu-server-macos-arm64.dmg
+          cp dist/uzu-server-macos-arm64/BUILD-INFO.json dist/BUILD-INFO.json
+          # Only the DMG can carry an offline ticket; the tar contains the same signed executable.
+          tar -czf dist/uzu-server-macos-arm64.tar.gz -C dist uzu-server-macos-arm64
+          (cd dist && shasum -a 256 uzu-server-macos-arm64.dmg uzu-server-macos-arm64.tar.gz BUILD-INFO.json > SHA256SUMS)
 
-      - name: Upload notarized server
+      - name: Preserve release payload
         uses: actions/upload-artifact@v4
         with:
-          name: server-notarized
-          path: ${{ runner.temp }}/uzu-server.dmg
+          name: native-server
+          path: |
+            dist/uzu-server-macos-arm64.dmg
+            dist/uzu-server-macos-arm64.tar.gz
+            dist/BUILD-INFO.json
+            dist/SHA256SUMS
           if-no-files-found: error
-
-      - name: Commit server update
-        env:
-          SOURCE_SHA: ${{ needs.build.outputs.source_sha }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add uzu/Resources/bin/macOS/cli uzu/Resources/bin/macOS/cli-tools
-          git commit -m "Update uzu server from trymirai/uzu@$SOURCE_SHA" \
-            -m "Co-authored-by: Copilot App <223556219+Copilot@users.noreply.github.com>"
-          git push origin "HEAD:$DEFAULT_BRANCH"
 
       - name: Remove signing credentials
         if: always()
@@ -202,12 +234,43 @@ jobs:
             rm "$SIGNING_CERTIFICATE"
           fi
 
+  release:
+    needs: [build, sign]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-server
+          path: dist
+      - name: Publish native release (never move component latest)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ needs.build.outputs.tag }}
+          PACKAGING_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          (cd dist && sha256sum --check SHA256SUMS)
+          source_sha=$(jq -er '.source_sha' dist/BUILD-INFO.json)
+          {
+            printf 'Native Apple Silicon server built from [trymirai/uzu@%s](https://github.com/trymirai/uzu/commit/%s).\n\n' "$source_sha" "$source_sha"
+            printf 'Requires macOS 26.4+ and an Apple GPU. No Intel, Windows or Linux server assets are published.\n\n'
+            printf 'Download the notarized DMG (offline ticket) or signed tar archive. Verify SHA256SUMS. Models are downloaded separately and carry their own licenses.\n\n'
+            printf 'See BUILD-INFO.json for the source revision, Cargo.lock hash, Rust and Xcode versions. cli-tools is a developer utility and is not included.\n'
+          } > notes.txt
+          gh release create "$RELEASE_TAG" dist/* --target "$PACKAGING_SHA" \
+            --title "Uzu native server $RELEASE_TAG" --notes-file notes.txt --latest=false
+
   publish:
-    needs: update
+    if: inputs.publish_component
+    needs: [build, release]
     permissions:
       contents: write
     uses: ./.github/workflows/publish.yml
     with:
+      server_tag: ${{ needs.build.outputs.tag }}
       mode: ${{ inputs.mode }}
       use_self_hosted: ${{ inputs.use_self_hosted }}
     secrets: inherit

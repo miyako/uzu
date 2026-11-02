@@ -25,18 +25,18 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 	ARRAY LONGINT:C221($len; 0)
 	
 	
-	//uzu does not accept local model path 
-	
-	If (Value type:C1509($options.model)=Is text:K8:3)
-		If (Match regex:C1019("(^|\\/[^/]+){2,}"; $options.model; 1; $pos; $len))
-			$URL:=$options.model
-			$components:=Split string:C1554($URL; "/")
-			$USER:=$components.shift()
-			$REPO:=$components.shift()
-			This:C1470._models.push($REPO)
-			This:C1470.offline:=True:C214
-		End if 
-	End if 
+	Case of
+		: (Value type:C1509(This:C1470.options.model)=Is text:K8:3)
+			If (This:C1470.options.model#"")
+				This:C1470._models.push(This:C1470.options.model)
+				This:C1470.offline:=True:C214
+			End if
+		: (OB Instance of:C1731(This:C1470.options.model; 4D:C1709.Folder))
+			If (This:C1470.options.model.exists)
+				This:C1470._models.push(This:C1470.options.model.name)
+				This:C1470.offline:=True:C214
+			End if
+	End case
 	
 	If (Not:C34(This:C1470.offline))
 		
@@ -67,7 +67,7 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 			$request:=4D:C1709.HTTPRequest.new($API).wait()
 			If ($request.response.status=Null:C1517)
 				This:C1470._models.push([$USER; $REPO].join("/"))
-				This:C1470.options.model:=$huggingface.folder.file($huggingface.path)  //assuming the 1st path is model
+				This:C1470.options.model:=$huggingface.folder
 				This:C1470.offline:=True:C214
 				continue
 			End if 

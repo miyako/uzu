@@ -11,7 +11,7 @@
 
 `_uzu_Controller` is the default controller used by all `_uzu` subclasses. It inherits all queueing and execution behaviour from [`_CLI_Controller`](_CLI_Controller.md) and overrides only `onTerminate` to forward the termination event back to the owning `_uzu` instance's `onTerminate` callback.
 
-This allows application code to attach a single `onTerminate` function on the `_server` (or `uzu`) instance and have it called automatically when the `uzu-server` process exits.
+This allows application code to attach a single `onTerminate` function on the `_server` instance and have it called automatically when the `cli server` process exits.
 
 ### Overridden event callbacks
 
@@ -47,10 +47,10 @@ Function onData($worker : 4D.SystemWorker; $params : Object)
     LOG EVENT(Into 4D debug message; $params.data)
 ```
 
-Then pass it when constructing the server:
+Pass the custom controller class when directly constructing `_server`:
 
 ```4d
-$uzu:=cs.uzu.uzu.new($port; $huggingfaces; $homeFolder; $options; $event)
+$server:=cs.uzu._server.new(cs.MyController)
 // _uzu automatically detects MyController extends _uzu_Controller
 // and uses it in place of the default
 ```

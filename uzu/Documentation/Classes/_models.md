@@ -13,14 +13,16 @@
 
 ## Description
 
-`_models` is the download-and-startup orchestrator. On construction it iterates the `huggingfaces` collection, queries the Hugging Face API to resolve file metadata (OID, size, path), and builds an internal `files` queue. If the network is unreachable the class sets `offline: true` and skips downloading.
+`_models` is the download-and-startup orchestrator. A non-empty text `options.model` (catalog ID, repository ID or native directory path) or an existing `4D.Folder` delegates model resolution to the native CLI immediately. The legacy `offline` property means the component skips its own download queue; it does **not** guarantee network-free native startup.
+
+Otherwise it iterates `huggingfaces`, queries the Hugging Face API for file metadata (OID, size, path), and builds a `files` queue. If the API is unreachable it attempts the descriptor's local folder. Descriptors must provide a complete Uzu-compatible directory, not a GGUF file; native resolution is recommended.
 
 URL formats accepted in `huggingface.URL`:
 
 | Format | Example |
 | --- | --- |
 | Full HTTPS URL | `https://huggingface.co/user/repo` |
-| Short `user/repo` path | `hugging-quants/Llama-3.2-3B-Instruct-Q4_K_M-GGUF` |
+| Short `user/repo` path | A supported Uzu model repository |
 
 ### Properties
 
@@ -30,7 +32,7 @@ URL formats accepted in `huggingface.URL`:
 | files | Collection | Resolved file metadata objects pending download |
 | options | Object | Merged server options |
 | event | cs.event.event | Callback functions |
-| offline | Boolean | `True` when the Hugging Face API could not be reached |
+| offline | Boolean | Skip component downloads: native identifier/folder supplied, or API unreachable |
 
 ### Methods
 
@@ -57,4 +59,4 @@ Called automatically when all downloads complete. The base implementation is a n
 ## See also
 
 - [`_Model`](_Model.md) — concrete subclass that overrides `models()` and `start()`
-- [`llama`](llama.md) — the public entry point
+- [`uzu`](uzu.md) — the public entry point

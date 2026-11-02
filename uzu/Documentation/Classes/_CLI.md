@@ -6,11 +6,11 @@
 | Parameter | Type | | Description |
 | --- | --- | --- | --- |
 | executableName | Text | -> | Base name of the executable (without `.exe` on Windows) |
-| controller | 4D.Class | -> | Class reference for the controller (default: `cs.llama._CLI_Controller`) |
+| controller | 4D.Class | -> | Class reference for the controller (default: `cs.uzu._CLI_Controller`) |
 
 ## Description
 
-`_CLI` resolves the platform-specific path to a bundled executable and attaches a controller that manages the underlying `4D.SystemWorker`. It is extended by [`_llama`](_llama.md) and should not be instantiated directly.
+`_CLI` resolves the platform-specific path to an installed executable and attaches a controller that manages the underlying `4D.SystemWorker`. It is extended by [`_uzu`](_uzu.md) and should not be instantiated directly.
 
 ### Resolution strategy
 
@@ -20,9 +20,10 @@ Platform identifiers:
 
 | Platform | Value |
 | --- | --- |
-| macOS (Intel or Apple Silicon) | `macOS` |
-| Windows x64 | `Windows` |
-| Windows ARM | `WindowsARM` |
+| macOS (native Apple Silicon server, macOS 26.4+) | `macOS` |
+
+The constructor returns immediately on Windows. The generic escaping helper
+retains Windows code, but this component does not ship a Windows or Intel server.
 
 ### Properties (read-only)
 
@@ -35,7 +36,7 @@ Platform identifiers:
 | currentDirectory | 4D.Folder | Folder containing the executable |
 | executablePath | Text | Full path (or bare name) of the executable |
 | executableFile | 4D.File | `4D.File` reference to the executable |
-| controller | cs.llama._CLI_Controller | Attached controller instance |
+| controller | cs.uzu._CLI_Controller | Attached controller instance |
 
 ### Methods
 
@@ -71,4 +72,4 @@ Wraps a string in double quotes. Useful when building command strings that must 
 ## See also
 
 - [`_CLI_Controller`](_CLI_Controller.md) — manages `4D.SystemWorker` execution
-- [`_llama`](_llama.md) — extends `_CLI` for llama.cpp programs
+- [`_uzu`](_uzu.md) — extends `_CLI` for the native `cli` program

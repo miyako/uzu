@@ -1,0 +1,37 @@
+Uzu native server for Apple Silicon
+==================================
+Requires macOS 26.4 or newer, an Apple GPU and sufficient memory for your model.
+This is the cli server built from trymirai/uzu, not the Mirai desktop app.
+
+1. Download the DMG or tar.gz and SHA256SUMS from the same server-* release:
+   https://github.com/miyako/uzu/releases
+2. Verify with: shasum -a 256 --check SHA256SUMS
+   (download all listed assets, or verify the selected file against its line).
+3. Open the notarized DMG in Finder, or extract:
+   tar -xzf uzu-server-macos-arm64.tar.gz
+4. Run from the extracted directory:
+   ./cli --version
+   ./cli server --help
+   ./cli server --model alibaba:qwen3.5:0.8b:mirai:mirai-m:4 --host 127.0.0.1 --port 8080
+5. In another terminal:
+   curl --fail http://127.0.0.1:8080/v1/models
+
+For 4D, copy cli and its license/build-info files into:
+   uzu/Resources/bin/macOS/
+Do not copy the enclosing archive directory into that path.
+The component's executable must be uzu/Resources/bin/macOS/cli.
+
+Models are NOT included. Initial model resolution/download needs network access;
+compatible complete local model directories are also accepted by --model.
+Uzu models are not arbitrary GGUF files. Each model has its own license.
+No Homebrew, Rust, external metallib or non-system dylib is needed at runtime.
+Keep the default loopback host; the server does not provide API authentication.
+
+The DMG carries a stapled offline notarization ticket. The tar archive contains
+the same signed binary, but Gatekeeper may need network access for its ticket.
+Do not bypass Gatekeeper if signature or notarization verification fails.
+
+BUILD-INFO.json records the exact source SHA and toolchain. LICENSE-UZU is the
+upstream MIT license. THIRD-PARTY.json and licenses/ record dependency licenses
+and available notices (including build-time/workspace dependencies).
+Source and build guide: https://github.com/miyako/uzu/blob/main/docs/native-builds.md

@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Download, verify, integrate, and build the Uzu native server for 4D on Apple Silicon.">
+  <meta name="color-scheme" content="light dark">
+  <title>Integration guide — Uzu for 4D</title>
+  <link rel="stylesheet" href="{{BASE}}style.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <aside class="sidebar">
+    <a class="brand" href="{{BASE}}" aria-label="Uzu home"><span class="brand-mark" aria-hidden="true">u.</span> uzu <span class="brand-note">for 4D</span></a>
+    <p class="sidebar-caption">Local models.<br>Your application.</p>
+    <nav aria-label="Documentation">
+      <span class="nav-label">Get started</span>
+      <a href="{{BASE}}">Overview</a>
+      <a href="{{BASE}}#requirements">Compatibility</a>
+      <a href="{{BASE}}#quickstart">First request</a>
+      <a href="#downloads">Downloads</a>
+      <span class="nav-label">Integrate &amp; build</span>
+      <a href="#four-d">Use with 4D</a>
+      <a href="#server-options">Server options</a>
+      <a href="#native-builds">Native build &amp; release</a>
+    </nav>
+    <div class="sidebar-bottom">Apple Silicon · Metal 4<br><a href="https://github.com/trymirai/uzu">Powered by Uzu ↗</a></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><span>Documentation / Integration guide</span><div><a href="#downloads">Downloads</a><a href="{{REPO}}">GitHub ↗</a></div></header>
+    <main id="main">
+      <section class="guide-intro"><p class="eyebrow">Practical guide</p><h1>From native build<br><span>to your application.</span></h1><p class="lede">Choose the right package, verify its provenance, and connect your 4D project to a local model.</p></section>
+      <section id="downloads" aria-labelledby="downloads-title">
+        <p class="eyebrow">01 / Obtain the runtime</p><h2 id="downloads-title">Downloads, without the guesswork.</h2>
+        <p>Browse <a href="{{REPO}}/releases">all repository releases</a> and choose a <strong>native server release</strong>. Component and server versions are independent, so the repository's “latest” release is not a reliable native-server selector.</p>
+        <div class="callout"><strong>Availability depends on an explicit release run.</strong><p>This guide describes the native packaging pipeline, not a promise that a release has already been published. If no suitable release exists, a maintainer must dispatch <strong>Update server</strong> on the default branch with <code>publish_release</code> enabled. Its default build does not publish a release.</p></div>
+        <div class="table-wrap"><table><caption>Native server release assets</caption><thead><tr><th scope="col">Asset</th><th scope="col">Purpose</th></tr></thead><tbody>
+          <tr><th scope="row"><code>.tar.gz</code></th><td>Signed and notarized native distribution. The extracted <code>uzu-server-macos-arm64</code> directory contains <code>cli</code> at its root.</td></tr>
+          <tr><th scope="row"><code>.dmg</code></th><td>Notarized disk image distribution; use the release's installation instructions.</td></tr>
+          <tr><th scope="row"><code>SHA256SUMS</code></th><td>Checksums for verifying downloaded assets.</td></tr>
+          <tr><th scope="row"><code>BUILD-INFO.json</code></th><td>Recorded source revision, version, and build/toolchain provenance.</td></tr>
+          <tr><th scope="row">Notices &amp; licenses</th><td>Redistribution and dependency licensing information accompanying the native package.</td></tr>
+        </tbody></table></div>
+        <h3>Verify before running</h3>
+        <p>Download the archive and <code>SHA256SUMS</code> from the same release into one directory. Compare the archive's digest with its entry in that file:</p>
+        <pre><code>shasum -a 256 YOUR_DOWNLOADED_ARCHIVE.tar.gz
+cat SHA256SUMS
+tar -xzf YOUR_DOWNLOADED_ARCHIVE.tar.gz
+cd uzu-server-macos-arm64
+./cli server --help</code></pre>
+        <p>Keep macOS security checks enabled; do not strip quarantine or bypass Gatekeeper. A checksum detects a mismatched download but does not replace checking the release source and signing provenance.</p>
+        <h3>Actions artifacts</h3>
+        <p>For a specific successful run, open <a href="{{REPO}}/actions/workflows/update-server.yml">Actions → Update server</a> and review its artifacts and logs. Normal manual runs and pull-request builds require no Apple credentials and produce the <code>native-server-unsigned</code> Actions artifact. This is an unsigned development build, not a signed/notarized release. Artifacts may expire, and downloading them may require a GitHub sign-in. Prefer published, signed/notarized release assets for regular installation; do not bypass macOS security checks to run an unsigned build.</p>
+        <p>Model weights are <strong>not included</strong>. Downloads, disk and memory requirements, and model licenses are separate from the server distribution.</p>
+      </section>
+      <section id="four-d" aria-labelledby="four-d-title">
+        <p class="eyebrow">02 / Application lifecycle</p><h2 id="four-d-title">Use it from 4D.</h2>
+        <ol class="steps">
+          <li>Add this project as a component to your <strong>4D 20+</strong> host application.</li>
+          <li>A repository checkout does not bundle native executables. Download and verify a published native release, then copy its root <code>cli</code> to <code>uzu/Resources/bin/macOS/cli</code> in the component source. Alternatively, install <code>cli</code> on <code>PATH</code>, which the component uses if the resource is absent. The component <strong>Publish</strong> workflow installs the checksummed native executable from an exact release tag automatically.</li>
+          <li>Create your event handler and start the server during application startup. Keep the model ID as a string to let Uzu resolve and download its model assets.</li>
+        </ol>
+        <div class="code-heading"><span>Startup</span><span>4D</span></div>
+        <pre><code>var $event : cs.event.event
+$event:=cs.event.event.new()
+$event.onError:=Formula(ALERT($2.message))
+
+var $uzu : cs.uzu.uzu
+$uzu:=cs.uzu.uzu.new(8080; Null; Folder(fk home folder).folder(".uzu"); {model: "alibaba:qwen3.5:0.8b:mirai:mirai-m:4"; host: "127.0.0.1"}; $event)</code></pre>
+        <p>The constructor accepts the port, optional model-download configuration, working folder, server options, and event handler. It checks the port before launching a background process. Use the error callback to surface a port conflict or startup failure.</p>
+        <div class="code-heading"><span>Application exit</span><span>4D</span></div>
+        <pre><code>cs.uzu.uzu.new().terminate()</code></pre>
+        <div class="callout"><strong>Process launch is not HTTP readiness.</strong><p>The component's <code>onSuccess</code> event currently signals worker launch, not that the model or HTTP server is ready. Poll <code>GET /v1/models</code> until it succeeds before sending chat requests. Allow time for model downloads and loading, and handle startup errors and timeouts in your application.</p></div>
+        <p>The component manages the process, not a different inference API. After confirming readiness, use the same <a href="{{BASE}}#quickstart">HTTP chat requests</a> as any other client.</p>
+      </section>
+      <section id="server-options" aria-labelledby="options-title">
+        <p class="eyebrow">03 / Keep configuration precise</p><h2 id="options-title">The server's supported options.</h2>
+        <p>These are the <code>cli server</code> options for the upstream revision documented here. In the 4D options object, underscore-separated names map to kebab-case command-line flags. Do not pass arbitrary generation settings as server options.</p>
+        <div class="table-wrap"><table><caption>Server configuration</caption><thead><tr><th scope="col">CLI option</th><th scope="col">Meaning</th></tr></thead><tbody>
+          <tr><th scope="row"><code>--model</code></th><td>A model ID, Hugging Face repository, or full path to a compatible local model <strong>directory</strong> (not a single GGUF file).</td></tr>
+          <tr><th scope="row"><code>--host</code></th><td>Bind address. Use <code>127.0.0.1</code> for local-only access.</td></tr>
+          <tr><th scope="row"><code>--port</code></th><td>Listening port, such as <code>8080</code>.</td></tr>
+          <tr><th scope="row"><code>--prefix-cache</code> / <code>--no-prefix-cache</code></th><td>Enable or disable prefix caching.</td></tr>
+          <tr><th scope="row"><code>--verbose-file-log</code></th><td>Enable verbose file logging.</td></tr>
+        </tbody></table></div>
+        <div class="callout"><strong>Token limits belong in the request.</strong><p><code>--max-tokens</code> is not a server option. Use <code>max_tokens</code> in the JSON body of a chat completion request.</p></div>
+      </section>
+      <section id="native-builds" aria-labelledby="builds-title">
+        <p class="eyebrow">04 / For maintainers</p><h2 id="builds-title">Build from a recorded source.</h2>
+        <p>The <strong>Update server</strong> workflow resolves the selected upstream source to a full commit SHA. Its default source is <code>main</code>: “latest” means the current upstream <code>main</code> HEAD at resolution time, not the newest version tag or a prebuilt upstream download.</p>
+        <p>It builds only the Rust package <code>cli</code> from <code>crates/legacy/cli</code>, using locked Cargo dependencies. The executable is still called <code>cli</code>; <code>cli-tools</code> is not part of this native build. No stale native binaries are bundled in the source checkout, and this pipeline does not provide universal Intel/Apple Silicon executables.</p>
+        <p><code>publish_release</code> defaults to <code>false</code>. Ordinary dispatches and pull-request builds produce the credential-free unsigned Actions artifact. Only an explicit default-branch dispatch with <code>publish_release: true</code> signs, notarizes, and publishes the arm64 <code>.tar.gz</code> and DMG distributions, with checksums, build provenance, and licensing notices. Native server tags are source-qualified and separate from component-version tags.</p>
+        <p>Optional <code>publish_component</code> runs only after a native release has been published. The component <strong>Publish</strong> workflow installs and verifies the native executable from the exact selected release tag rather than relying on a binary in git.</p>
+        <p>Building requires a <strong>macOS 26 runner and a Metal 4-capable Xcode toolchain</strong>. The pinned Rust toolchain is <code>nightly-2026-08-10</code>, verified as <code>rustc 1.99.0-nightly</code> and recorded with the build. Apple signing and notarization credentials are needed only for the explicit release path, not unsigned builds or end users.</p>
+        <a class="button primary" href="{{REPO}}/blob/HEAD/docs/native-builds.md">Read the native build &amp; release guide <span aria-hidden="true">↗</span></a>
+        <div class="reference"><h3>Documentation baseline</h3><p>Server facts are pinned to upstream workspace <strong>0.6.15</strong>, commit <a href="https://github.com/trymirai/uzu/tree/798803bba8fc26b2afd61e9a8ae23ab9c16d3994"><code>798803bba8fc</code></a>. Check the selected release's <code>BUILD-INFO.json</code> before assuming the same behavior for a newer build.</p><p>Both this repository and upstream Uzu use the MIT license. Included dependency notices and individual model licenses also apply.</p></div>
+      </section>
+      <footer><span>Uzu for 4D · <a href="{{REPO}}/blob/HEAD/LICENSE">MIT license</a></span><span><a href="{{BASE}}">Back to overview ↑</a></span></footer>
+    </main>
+  </div>
+</body>
+</html>

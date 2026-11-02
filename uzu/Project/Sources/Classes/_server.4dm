@@ -12,22 +12,13 @@ Function start($option : Object) : 4D:C1709.SystemWorker
 	$command:=This:C1470.escape(This:C1470.executablePath)
 	$command+=" server "
 	
-	//Case of 
-	//: (Value type($option.model)=Is object)\
-		&& (OB Instance of($option.model; 4D.Folder))\
-		&& ($option.model.exists)
-	//$command+=" --model "
-	//$command+=This.escape(This.expand($option.model).path)
-	//$command+=" "
-	//End case 
-	
 	var $arg : Object
 	var $valueType : Integer
 	var $key : Text
 	
 	For each ($arg; OB Entries:C1720($option))
 		Case of 
-			: (["help"; "version"].includes($arg.key))
+			: (["help"; "version"; "onTerminate"; "onStdErr"; "onStdOut"].includes($arg.key))
 				continue
 		End case 
 		$valueType:=Value type:C1509($arg.value)
@@ -62,12 +53,5 @@ Function start($option : Object) : 4D:C1709.SystemWorker
 				//
 		End case 
 	End for each 
-	
-	var $HF_HUB_CACHE : 4D:C1709.Folder
-	$HF_HUB_CACHE:=Folder:C1567(Temporary folder:C486; fk platform path:K87:2).folder(Generate UUID:C1066)
-	$HF_HUB_CACHE.create()
-	
-	This:C1470.controller.variables:={\
-		HF_HUB_CACHE: $HF_HUB_CACHE.path}
 	
 	return This:C1470.controller.execute($command).worker

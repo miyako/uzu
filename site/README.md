@@ -38,9 +38,11 @@ Only the deployment job receives `pages: write` and `id-token: write`; the
 build uses read-only repository permissions. No Jekyll, Ruby, JavaScript,
 third-party fonts, CDN, or runtime network dependency is used.
 
-The shared layout, typography, palette, responsive behavior, and accessibility
-contract are documented in [`SITE-DESIGN.md`](../SITE-DESIGN.md). Uzu keeps its
-own green accent, logo, Apple Silicon requirements, and model-directory content.
+[`SITE-DESIGN.md`](../SITE-DESIGN.md) links to the centrally maintained shared
+design guideline and records Uzu's explicitly adopted version. It is a
+documentation reference, not a submodule or build dependency, and is excluded
+from generated Pages output. Uzu keeps its own green accent, logo, Apple Silicon
+requirements, and model-directory content.
 The site has no clipboard controls; the guideline's copy-control rules apply
 only to sites that already provide them.
 

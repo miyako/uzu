@@ -6,12 +6,13 @@
   <meta name="description" content="Run Uzu's native local inference server on Apple Silicon and manage its lifecycle from 4D.">
   <meta name="color-scheme" content="light dark">
   <title>Uzu — Local inference, connected to 4D</title>
+  <link rel="icon" type="image/png" href="{{BASE}}logo.png">
   <link rel="stylesheet" href="{{BASE}}style.css">
 </head>
 <body>
   <a class="skip" href="#main">Skip to content</a>
   <aside class="sidebar">
-    <a class="brand" href="{{BASE}}" aria-label="Uzu home"><span class="brand-mark" aria-hidden="true">u.</span> uzu <span class="brand-note">for 4D</span></a>
+    <a class="brand" href="{{BASE}}" aria-label="Uzu home"><img src="{{BASE}}logo.png" width="42" height="42" alt=""><span>uzu<small>for 4D</small></span></a>
     <p class="sidebar-caption">Local models.<br>Your application.</p>
     <nav aria-label="Documentation">
       <span class="nav-label">Get started</span>
@@ -30,11 +31,21 @@
     <header class="topbar"><span>Documentation / Overview</span><div><a href="{{BASE}}guide.html#downloads">Downloads</a><a href="{{REPO}}">GitHub ↗</a></div></header>
     <main id="main">
       <section class="hero">
+        <div class="hero-copy">
         <p class="eyebrow"><span class="status-dot" aria-hidden="true"></span> Native inference · 4D integration</p>
-        <h1>Keep the model close.<br><span>Build on your Mac.</span></h1>
+        <h1>Fast by design.<br><span>Made for Apple.</span></h1>
         <p class="lede">A local inference server for Apple Silicon, with a 4D component to start it, connect to it, and shut it down with your application.</p>
         <div class="actions"><a class="button primary" href="#quickstart">Make your first request <span aria-hidden="true">→</span></a><a class="button" href="{{BASE}}guide.html#downloads">Find a native build</a></div>
         <div class="hero-meta"><span>Open source · MIT</span><span>Loopback-first examples</span><span>No hosted inference service required</span></div>
+        </div>
+        <div class="engine-panel" role="group" aria-label="Your application connects over local HTTP to Uzu, which runs a model on your Mac">
+          <div class="panel-top"><span class="panel-label">The local stack</span><span class="local-tag">On your machine</span></div>
+          <div class="app-node"><span class="node-symbol" aria-hidden="true">4D</span><div><strong>Your application</strong><span>4D component or your own HTTP client</span></div></div>
+          <div class="connection">HTTP / 127.0.0.1:8080</div>
+          <div class="engine-node"><img src="{{BASE}}logo.png" width="52" height="52" alt=""><div><strong>Uzu</strong><span>Native inference server for Apple Silicon</span></div></div>
+          <div class="model-node"><span class="file-mark" aria-hidden="true">MODEL</span><div><strong>A model you choose</strong><span>Catalog ID, Hugging Face repo or local directory</span></div></div>
+          <div class="panel-bottom"><span class="status-dot" aria-hidden="true"></span> Local inference. A familiar HTTP interface.</div>
+        </div>
       </section>
       <section aria-labelledby="paths-title">
         <div class="section-heading"><p class="eyebrow">Two ways in</p><h2 id="paths-title">One engine. Your workflow.</h2></div>

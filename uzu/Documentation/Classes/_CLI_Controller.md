@@ -1,11 +1,11 @@
 # _CLI_Controller
 ### Manages a queue of `4D.SystemWorker` commands for a `_CLI` instance.
 
-> _CLI_Controller.new (CLI : cs.llama._CLI)
+> _CLI_Controller.new (CLI : cs.uzu._CLI)
 
 | Parameter | Type | | Description |
 | --- | --- | --- | --- |
-| CLI | cs.llama._CLI | -> | The owning `_CLI` instance |
+| CLI | cs.uzu._CLI | -> | The owning `_CLI` instance |
 
 ## Description
 
@@ -40,7 +40,7 @@ The following properties may be set to `4D.Function` values before calling `exec
 
 ### Methods
 
-#### execute (command, message, context) → cs.llama._CLI_Controller
+#### execute (command, message, context) → cs.uzu._CLI_Controller
 
 Enqueues one or more commands and starts execution if no worker is currently running.
 
@@ -49,7 +49,7 @@ Enqueues one or more commands and starts execution if no worker is currently run
 | command | Text \| Collection | -> | Shell command string, or a collection of command strings |
 | message | Variant \| Collection | -> | Optional stdin payload(s) sent to the worker |
 | context | Variant \| Collection | -> | Optional per-command context object(s); retrievable via `SYSTEM_WORKER_CONTEXT` in callbacks |
-| Result | cs.llama._CLI_Controller | <- | `This` — enables chaining |
+| Result | cs.uzu._CLI_Controller | <- | `This` — enables chaining |
 
 When `message` is an Object or Collection it is serialized to JSON before being posted. Blob and Text values are posted as-is. Scalar values are converted with `String()`.
 
@@ -60,4 +60,4 @@ Aborts the queue, clears all pending commands, terminates the active worker, and
 ## See also
 
 - [`_CLI`](_CLI.md) — owns and instantiates the controller
-- [`_llama_Controller`](_llama_Controller.md) — extends `_CLI_Controller` with llama-specific termination handling
+- [`_uzu_Controller`](_uzu_Controller.md) — extends `_CLI_Controller` with Uzu termination handling

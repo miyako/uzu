@@ -11,6 +11,10 @@ on:
       - '*/Resources/**'
   workflow_dispatch:
     inputs:
+        server_tag:
+          type: string
+          description: Exact server-* release tag (empty selects newest complete native release)
+          required: false
         use_self_hosted:
             type: boolean
             description: when github hosted runners are busy
@@ -26,6 +30,9 @@ on:
           required: true
   workflow_call:
     inputs:
+      server_tag:
+        type: string
+        default: ''
       use_self_hosted:
         type: boolean
         default: false
@@ -37,16 +44,19 @@ concurrency:
   group: publish-component
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 env: 
   project_path: uzu/Project/uzu.4DProject
   
 jobs:
 
   publish:
-    if: ${{ !inputs.use_self_hosted }}
+    if: ${{ !inputs.use_self_hosted && github.ref_name == github.event.repository.default_branch }}
     permissions:
       contents: write
-    runs-on: [macos-latest]
+    runs-on: macos-26
     steps:
 
       - name: configure
@@ -58,8 +68,19 @@ jobs:
       - name: checkout 
         uses: actions/checkout@v4
         with:
-          # A reusable call must include the server commit pushed by its caller.
           ref: ${{ github.ref_name }}
+
+      - name: Install Python for release verification
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install exact native release into component
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SERVER_TAG: ${{ inputs.server_tag }}
+        run: python3 scripts/install-native.py
 
       - name: set version
         id: version
@@ -141,10 +162,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}    
 
   publish-locally:
-    if: ${{ inputs.use_self_hosted }}
+    if: ${{ inputs.use_self_hosted && github.ref_name == github.event.repository.default_branch }}
     permissions:
       contents: write
-    runs-on: [self-hosted, macos]
+    runs-on: [self-hosted, macOS, ARM64]
     steps:
 
       - name: configure
@@ -157,6 +178,18 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.ref_name }}
+
+      - name: Install Python for release verification
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install exact native release into component
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SERVER_TAG: ${{ inputs.server_tag }}
+        run: python3 scripts/install-native.py
 
       - name: set version
         id: version

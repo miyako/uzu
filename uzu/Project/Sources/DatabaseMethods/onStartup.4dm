@@ -30,7 +30,7 @@ $port:=8080
 
 var $options : Object
 
-$options:={model: "trymirai/Qwen3.5-0.8B-L"; port: $port}
+$options:={model: "alibaba:qwen3.5:0.8b:mirai:mirai-m:4"; host: "127.0.0.1"; port: $port}
 
 var $huggingfaces : cs:C1710.event.huggingfaces
 $huggingfaces:=cs:C1710.event.huggingfaces.new([])

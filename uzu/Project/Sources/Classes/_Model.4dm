@@ -10,18 +10,7 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 		This:C1470.download()
 	End if 
 	
-Function _isRouterMode() : Boolean
-	
-	return ((OB Instance of:C1731(This:C1470.options.models_preset; 4D:C1709.File))\
-		 && (This:C1470.options.models_preset.exists))\
-		 || ((OB Instance of:C1731(This:C1470.options.models_dir; 4D:C1709.Folder))\
-		 && (This:C1470.options.models_dir.exists))
-	
 Function models() : cs:C1710.event.models
-	
-	If (This:C1470._isRouterMode())
-		return cs:C1710.event.models.new([cs:C1710.event.model.new()])
-	End if 
 	
 	var $model : cs:C1710.event.model
 	
@@ -51,8 +40,7 @@ Function onDownload($oid : Text)
 		$downloaded:=This:C1470.files.query("oid == :1"; $oid).first()
 		If ($downloaded#Null:C1517)
 			var $model : Object
-			$model:=OB Instance of:C1731($downloaded.folder; 4D:C1709.Folder)\
-				 ? $downloaded.folder.file($downloaded.path) : $downloaded.folder
+			$model:=$downloaded.folder
 			
 			//any file not in option is assumed to be the main model
 			var $option : Text

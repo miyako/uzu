@@ -3,6 +3,10 @@ Class extends _interface
 Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; $HOME : 4D:C1709.Folder; $options : Object; $event : cs:C1710.event.event)
 	
 	Super:C1705()
+
+	If (Count parameters:C259=0)
+		return
+	End if
 	
 	var $uzu : cs:C1710.workers.worker
 	$uzu:=cs:C1710.workers.worker.new(cs:C1710._server)
@@ -10,7 +14,7 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 	If (Not:C34($uzu.isRunning($port)))
 		
 		If (Not:C34(OB Instance of:C1731($HOME; 4D:C1709.Folder))) || (Not:C34($HOME.exists))
-			$HOME:=Folder:C1567(fk home folder:K87:24).folder(".GGUF")
+			$HOME:=Folder:C1567(fk home folder:K87:24).folder(".uzu")
 		End if 
 		
 		If ($port=0) || ($port<0) || ($port>65535)

@@ -1,16 +1,16 @@
 # _interface
-### Abstract base class providing shared server lifecycle methods for the llama namespace.
+### Abstract base class providing shared server lifecycle methods for the Uzu namespace.
 
 > _interface.new ()
 
-`_interface` has no constructor parameters. It is not instantiated directly; it is extended by [`llama`](llama.md).
+`_interface` has no constructor parameters. It is not instantiated directly; it is extended by [`uzu`](uzu.md).
 
 ## Description
 
-`_interface` is the root class of the `cs.llama` hierarchy. It provides two methods used by all subclasses:
+`_interface` is the root class of the `cs.uzu` hierarchy. It provides two methods used by all subclasses:
 
 - **`_onTCP`** — a callback invoked after a TCP port-availability check. If the port is free it dispatches a worker to start the server; if the port is already in use it fires `event.onError` with a descriptive message.
-- **`terminate`** — gracefully shuts down the running `llama-server` worker.
+- **`terminate`** — shuts down the running `cli server` worker.
 
 ### _onTCP ($status, $options)
 
@@ -23,19 +23,19 @@ Called internally after a port probe. When `$status.success` is `true` the metho
 
 ### terminate ()
 
-Obtains the server worker via `cs.llama.workers.worker` and calls `terminate()` on it. Use this from any context where you hold a reference to the `llama` instance.
+Obtains the server worker via `cs.workers.worker` and calls `terminate()` on it. Use this from any context where you hold a reference to the `uzu` instance.
 
 ## Examples
 
 ```4d
-// Terminate from anywhere — llama.new() with no arguments returns
+// Terminate from anywhere — uzu.new() with no arguments returns
 // a lightweight handle without starting a new server
-var $llama : cs.llama.llama
-$llama:=cs.llama.llama.new()
-$llama.terminate()
+var $uzu : cs.uzu.uzu
+$uzu:=cs.uzu.uzu.new()
+$uzu.terminate()
 ```
 
 ## See also
 
-- [`llama`](llama.md) — public subclass that extends `_interface`
+- [`uzu`](uzu.md) — public subclass that extends `_interface`
 - [`_server`](_server.md) — CLI wrapper whose worker is targeted by `terminate()`

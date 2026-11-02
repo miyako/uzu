@@ -1,69 +1,39 @@
 # _server
-### Extends `_llama` to build and launch the `llama-server` command line.
+
+Extends [`_uzu`](_uzu.md) to launch **`cli server`**.
 
 > _server.new (controller : 4D.Class)
 
-| Parameter | Type | | Description |
-| --- | --- | --- | --- |
-| controller | 4D.Class | -> | Optional custom controller class |
+The optional controller class extends `_uzu_Controller`. Application code
+normally uses [`cs.uzu.uzu`](uzu.md); the workers component manages `_server`.
 
-## Description
+## start (option : Object) -> 4D.SystemWorker
 
-`_server` extends [`_llama`](_llama.md) (with `command = "server"`) and provides the `start` method, which assembles the full `llama-server` command string from an options object and launches it via `_CLI_Controller.execute`.
+Binds `onTerminate`, escapes the executable path, appends the `server`
+subcommand, and converts option entries into arguments before passing the command
+to `_CLI_Controller.execute`.
 
-`_server` is never instantiated directly by application code. It is managed internally by the worker infrastructure; `cs.llama.llama` delegates to it via `cs.llama.workers.worker`.
-
-### Methods
-
-#### start (option : Object) → 4D.SystemWorker
-
-Builds the CLI command and starts the server.
-
-| Parameter | Type | | Description |
-| --- | --- | --- | --- |
-| option | Object | -> | Server options (see [llama](llama.md) for the full property list) |
-| Result | 4D.SystemWorker | <- | The launched worker |
-
-**Argument construction rules:**
-
-| Value type | CLI form |
+| Value | Command form |
 | --- | --- |
-| Real / Integer | `--flag value` |
+| Number | `--flag value` |
 | Text | `--flag escaped-value` |
-| Boolean `True` | `--flag` (no value) |
-| 4D.File (exists) | `--flag escaped-path` |
-| 4D.Folder (exists) | `--flag escaped-path` |
-| Collection | Flag repeated for each element |
+| Boolean true | `--flag` |
+| Existing 4D.File / 4D.Folder | `--flag escaped-path` |
+| Collection | Flag repeated for each supported element |
 
-The `model` property receives special treatment: it is always emitted first as `--model <path>` before the remaining options. The keys `model`, `model_url`, `help`, and `version` are skipped in the general loop. All other option keys have underscores replaced with hyphens.
+Keys use kebab case (`no_prefix_cache` -> `--no-prefix-cache`). `help`, `version`
+and event callback keys are excluded. Generic argument conversion does **not**
+imply that every option is supported: the current server's flags are documented
+in [`uzu`](uzu.md). In particular, `model` must be a supported identifier or a
+complete compatible directory, not an individual model file.
 
-**Environment variables** — before launching, `_server` creates two temporary folders and injects them as environment variables:
-
-| Variable | Purpose |
-| --- | --- |
-| `HF_HUB_CACHE` | Overrides Hugging Face cache directory |
-| `LLAMA_CACHE` | Overrides llama.cpp cache directory |
-
-Both folders are created fresh on each `start` call to prevent stale cache interference.
-
-## Examples
-
-`_server` is used indirectly via `cs.llama.llama`:
+The wrapper does not create per-launch cache directories. Native Uzu manages
+its own persistent storage; `HF_HUB_CACHE`/`LLAMA_CACHE` overrides are not used.
 
 ```4d
-var $llama : cs.llama.llama
-$llama:=cs.llama.llama.new(8080; $huggingfaces; $homeFolder; $options; $event)
+$uzu:=cs.uzu.uzu.new(8080; Null; $homeFolder; \
+    {model: "alibaba:qwen3.5:0.8b:mirai:mirai-m:4"}; $event)
 ```
 
-To terminate the server from the same (or any) context:
-
-```4d
-$llama:=cs.llama.llama.new()
-$llama.terminate()
-```
-
-## See also
-
-- [`_llama`](_llama.md) — parent class
-- [`_CLI_Controller`](_CLI_Controller.md) — executes the assembled command
-- [`_Model`](_Model.md) — calls `_server.start` after model download completes
+See [`_CLI`](_CLI.md) for executable resolution and escaping, and
+[`_CLI_Controller`](_CLI_Controller.md) for execution/lifecycle details.

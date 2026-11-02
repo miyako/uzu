@@ -2,3 +2,10 @@ uzu/Data/*
 dmg/*
 uzu/Project/DerivedData/*
 uzu/userPreferences.*
+.upstream/
+.upstream-build.log
+dist/
+site/_site/
+__pycache__/
+uzu/Resources/bin/macOS/*
+!uzu/Resources/bin/macOS/README.md

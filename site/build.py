@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 
 SOURCE = Path(__file__).resolve().parent
+ICON = SOURCE.parent / "uzu" / "Resources" / "logo.png"
 REPO = "https://github.com/miyako/uzu"
 
 
@@ -21,6 +22,7 @@ def build(output: Path, base_path: str = "/uzu/") -> None:
             raise ValueError(f"unresolved template value in {name}")
         (output / name).write_text(page, encoding="utf-8")
     shutil.copyfile(SOURCE / "style.css", output / "style.css")
+    shutil.copyfile(ICON, output / "logo.png")
     (output / ".nojekyll").touch()
 
 

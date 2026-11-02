@@ -38,7 +38,7 @@ class SiteTests(unittest.TestCase):
         BUILDER.build(OUTPUT, base)
         self.assertEqual(
             {path.name for path in OUTPUT.iterdir()},
-            {"index.html", "guide.html", "style.css", ".nojekyll"},
+            {"index.html", "guide.html", "style.css", "logo.png", ".nojekyll"},
         )
         pages = {}
         for path in OUTPUT.glob("*.html"):

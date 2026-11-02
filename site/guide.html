@@ -6,6 +6,7 @@
   <meta name="description" content="Download, verify, integrate, and build the Uzu native server for 4D on Apple Silicon.">
   <meta name="color-scheme" content="light dark">
   <title>Integration guide — Uzu for 4D</title>
+  <link rel="icon" type="image/png" href="{{BASE}}logo.png">
   <link rel="stylesheet" href="{{BASE}}style.css">
 </head>
 <body>
@@ -20,6 +21,7 @@
       <a href="{{BASE}}#quickstart">First request</a>
       <a href="#downloads">Downloads</a>
       <span class="nav-label">Integrate &amp; build</span>
+      <a href="{{BASE}}guide.html" aria-current="page">Integration guide</a>
       <a href="#four-d">Use with 4D</a>
       <a href="#server-options">Server options</a>
       <a href="#native-builds">Native build &amp; release</a>
@@ -28,7 +30,7 @@
   </aside>
   <div class="workspace">
     <header class="topbar"><span>Documentation / Integration guide</span><div><a href="#downloads">Downloads</a><a href="{{REPO}}">GitHub ↗</a></div></header>
-    <main id="main">
+    <main id="main" tabindex="-1">
       <section class="guide-intro"><p class="eyebrow">Practical guide</p><h1>From native build<br><span>to your application.</span></h1><p class="lede">Choose the right package, verify its provenance, and connect your 4D project to a local model.</p></section>
       <section id="downloads" aria-labelledby="downloads-title">
         <p class="eyebrow">01 / Obtain the runtime</p><h2 id="downloads-title">Downloads, without the guesswork.</h2>
@@ -95,8 +97,8 @@ $uzu:=cs.uzu.uzu.new(8080; Null; Folder(fk home folder).folder(".uzu"); {model: 
         <a class="button primary" href="{{REPO}}/blob/HEAD/docs/native-builds.md">Read the native build &amp; release guide <span aria-hidden="true">↗</span></a>
         <div class="reference"><h3>Documentation baseline</h3><p>Server facts are pinned to upstream workspace <strong>0.6.15</strong>, commit <a href="https://github.com/trymirai/uzu/tree/798803bba8fc26b2afd61e9a8ae23ab9c16d3994"><code>798803bba8fc</code></a>. Check the selected release's <code>BUILD-INFO.json</code> before assuming the same behavior for a newer build.</p><p>Both this repository and upstream Uzu use the MIT license. Included dependency notices and individual model licenses also apply.</p></div>
       </section>
-      <footer><span>Uzu for 4D · <a href="{{REPO}}/blob/HEAD/LICENSE">MIT license</a></span><span><a href="{{BASE}}">Back to overview ↑</a></span></footer>
     </main>
+    <footer><span>Uzu for 4D · <a href="{{REPO}}/blob/HEAD/LICENSE">MIT license</a></span><span><a href="{{BASE}}">Back to overview ↑</a></span></footer>
   </div>
 </body>
 </html>

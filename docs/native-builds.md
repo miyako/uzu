@@ -136,7 +136,11 @@ git diff --check
 GitHub runners, secrets, Apple notarization and Pages deployment can only be verified by authorized remote runs. A successful local source build or unsigned Actions artifact must not be described as a published/notarized release or a passing GitHub CI run.
 
 `tests/4d/validate.4dm` is a native 4D regression method for catalog/repository IDs,
-existing local-folder delegation and the no-argument termination handle. To run
+existing local-folder delegation, the no-argument termination handle, a `Null`
+event, `onError` code 2 when nothing is downloaded and no local folder is given
+or when starting with a nonexistent model folder or a single file, skipped
+descriptor reasons in that error,
+and locale-independent numeric arguments. To run
 it, copy `uzu/` into a disposable project directory, install the declared `tcp`,
 `workers` and `event` components in its `Components/`, copy the method into
 `Project/Sources/Methods/validate.4dm`, and invoke Tool4D with

@@ -12,8 +12,8 @@ subcommand when building the invocation.
 | Property | Type | Description |
 | --- | --- | --- |
 | port | Integer | Managed listening port |
-| onData | 4D.Function | stdout callback property |
-| onDataError | 4D.Function | stderr callback property |
+| onData | 4D.Function | Declared but not bound or forwarded by default (stdout is intentionally quiet) |
+| onDataError | 4D.Function | Declared but not bound or forwarded by default (stderr is intentionally quiet) |
 | onTerminate | 4D.Function | Forwarded by `_uzu_Controller` on process exit |
 
 ## bind (option : Object; properties : Collection) -> cs.uzu._CLI

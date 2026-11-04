@@ -23,9 +23,25 @@ directory. Calls the base method to remove the completed entry and starts once
 all files are available. The folder must contain a complete Uzu-compatible
 model; arbitrary GGUF files are not supported.
 
+## _onNothingToDownload ()
+
+Called by `download()` when legacy descriptors resolved no files. Calls
+`start()` only when `options.model` is an existing `4D.Folder`. Otherwise it
+calls `event.onError` with code `2` (naming the folder path when one was given)
+and does not launch. The message also lists why each descriptor was skipped
+(for example `user/repo: Hugging Face API returned HTTP 401`). Identifier and existing-folder models never reach this
+path: they are delegated to Uzu and launched by the `start` method.
+
 ## start ()
 
-Creates `cs.workers.worker` for `_server`, calls `start(port; options)` and then
+Launches at most once per instance; later calls are ignored (for example when
+the same file OID completes twice). Refuses to launch when `options.model` is
+neither non-empty text nor an existing `4D.Folder`. A single `4D.File` is never
+a uzu model, and a nonexistent folder (for example when the Hugging Face API
+was unreachable and the descriptor's local folder does not exist) would start
+the server without `--model`. In those cases it calls `event.onError` with code
+`2`, naming the path when one was given. Otherwise creates `cs.workers.worker`
+for `_server`, calls `start(port; options)` and then
 fires `event.onSuccess`. This is a **launch notification**, not a readiness
 probe. It does not wait for model download or HTTP availability.
 

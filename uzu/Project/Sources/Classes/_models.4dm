@@ -5,6 +5,7 @@ property options : Object
 property event : cs:C1710.event.event
 property _onResponse : 4D:C1709.Function
 property offline : Boolean
+property _unresolved : Collection
 
 Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; $options : Object; $formula : 4D:C1709.Function; $event : cs:C1710.event.event)
 	
@@ -12,14 +13,17 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 	This:C1470.event:=$event
 	This:C1470._onResponse:=$formula
 	This:C1470.options:=$options#Null:C1517 ? $options : {}
-	This:C1470.options.onTerminate:=This:C1470.event.onTerminate
-	This:C1470.options.onStdErr:=This:C1470.event.onStdErr
-	This:C1470.options.onStdOut:=This:C1470.event.onStdOut
+	If (This:C1470.event#Null:C1517)
+		This:C1470.options.onTerminate:=This:C1470.event.onTerminate
+		This:C1470.options.onStdErr:=This:C1470.event.onStdErr
+		This:C1470.options.onStdOut:=This:C1470.event.onStdOut
+	End if
 	This:C1470.options.port:=$port
 	This:C1470.offline:=False:C215
 	
 	This:C1470.files:=[]
 	This:C1470._models:=[]
+	This:C1470._unresolved:=[]
 	
 	ARRAY LONGINT:C221($pos; 0)
 	ARRAY LONGINT:C221($len; 0)
@@ -61,6 +65,7 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 					$REPO:=$components.shift()
 					$API:=["https://huggingface.co/api/models"; $USER; $REPO; "tree"; $BRANCH; "?recursive=true"].join("/")
 				Else 
+					This:C1470._unresolved.push($huggingface.URL+": unrecognized Hugging Face URL")
 					continue
 			End case 
 			var $request : 4D:C1709.HTTPRequest
@@ -88,6 +93,8 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 								oid: $1.value.oid; \
 								folder: $5}); $USER; $REPO; $BRANCH; $huggingface.folder; $huggingface.domain; $huggingface.name)
 							
+							var $queued : Integer
+							$queued:=This:C1470.files.length
 							For each ($file; $resources.query("type == :1 and path in :2"; "file"; $huggingface.paths))
 								//any file not in option is assumed to be the main model
 								var $option : Text
@@ -115,10 +122,14 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 									This:C1470.files.unshift($file)  //default: prepend
 								End if 
 							End for each 
+							If (This:C1470.files.length=$queued)
+								This:C1470._unresolved.push($huggingface.URL+": no file in the repository matches paths")
+							End if
 							This:C1470._models.push([$USER; $REPO].join("/"))
 						: (OB Instance of:C1731($huggingface.folder; 4D:C1709.File))
 							$file:=$request.response.body.query("path == :1"; $huggingface.name).first()
 							If ($file=Null:C1517)
+								This:C1470._unresolved.push($huggingface.URL+": "+$huggingface.name+" not found in the repository")
 								continue
 							End if 
 							$file.domain:=$huggingface.domain
@@ -129,8 +140,12 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 							$file.BRANCH:=$BRANCH
 							This:C1470.files.push($file)
 							This:C1470._models.push([$USER; $REPO].join("/"))
+						Else
+							This:C1470._unresolved.push($huggingface.URL+": folder must be a 4D.Folder or 4D.File")
 					End case 
 				End if 
+			Else
+				This:C1470._unresolved.push($huggingface.URL+": Hugging Face API returned HTTP "+String:C10($request.response.status))
 			End if 
 		End while 
 		
@@ -138,6 +153,11 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 	
 Function download()
 	
+	If (This:C1470.files.length=0)
+		This:C1470._onNothingToDownload()
+		return
+	End if
+
 	For each ($file; This:C1470.files)
 		If ($file.folder.exists)\
 			 && (OB Instance of:C1731($file.folder; 4D:C1709.Folder) ? ($file.folder.file($file.path).exists) : ($file.folder.exists))\
@@ -164,6 +184,20 @@ Function onDownload($oid : Text)
 		This:C1470.start()
 	End if 
 	
+Function _notifyError($error : cs:C1710.event.error)
+
+	If (This:C1470.event#Null:C1517)
+		If (Value type:C1509(This:C1470.event.onError)=Is object:K8:27)
+			If (OB Instance of:C1731(This:C1470.event.onError; 4D:C1709.Function))
+				This:C1470.event.onError.call(This:C1470; This:C1470.options; $error)
+			End if
+		End if
+	End if
+
+Function _onNothingToDownload()
+	//virtual
+	This:C1470.start()
+
 Function models() : cs:C1710.event.models
 	//virtual
 	return cs:C1710.event.models.new()

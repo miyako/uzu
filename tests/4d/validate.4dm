@@ -44,6 +44,14 @@ If ($reported.errors.length#1) || ($reported.errors[0].code#2)
 	$failures.push("Nothing to download without a local model folder must report onError code 2 and not launch")
 End if
 
+$reported.errors.clear()
+$model:=cs:C1710._Model.new(8080; cs:C1710.event.huggingfaces.new([]); {model: "trymirai/Qwen3.5-0.8B-L"}; Null:C1517; $reporting)
+$model.options.model:=$folder.folder("missing-model-folder")
+$model.start()
+If ($reported.errors.length#1) || ($reported.errors[0].code#2)
+	$failures.push("Starting with a nonexistent model folder (e.g. Hugging Face unreachable) must report onError code 2 and not launch")
+End if
+
 If ([0.3; 32768; 0.00001].map(Formula:C1597(_argNumber($1.value))).join(" ")#"0.3 32768 1E-05")
 	$failures.push("Numeric server arguments must use '.' regardless of the system locale")
 End if

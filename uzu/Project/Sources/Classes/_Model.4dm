@@ -94,6 +94,24 @@ Function start()
 	If (This:C1470._started)
 		return
 	End if
+	//_server omits --model unless it is non-empty text or an existing file/folder
+	var $hasModel : Boolean
+	Case of
+		: (Value type:C1509(This:C1470.options.model)=Is text:K8:3)
+			$hasModel:=(This:C1470.options.model#"")
+		: (OB Instance of:C1731(This:C1470.options.model; 4D:C1709.Folder)) || (OB Instance of:C1731(This:C1470.options.model; 4D:C1709.File))
+			$hasModel:=This:C1470.options.model.exists
+	End case
+	If (Not:C34($hasModel))
+		var $message : Text
+		$message:="no model to load: options.model is missing or does not exist"
+		If (OB Instance of:C1731(This:C1470.options.model; 4D:C1709.Folder)) || (OB Instance of:C1731(This:C1470.options.model; 4D:C1709.File))
+			$message+=": "+This:C1470.options.model.path
+		End if
+		LOG EVENT:C667(Into 4D debug message:K38:5; "uzu: "+$message)
+		This:C1470._notifyError(cs:C1710.event.error.new(2; $message; cs:C1710.event.models.new()))
+		return
+	End if
 	This:C1470._started:=True:C214
 	var $uzu : cs:C1710.workers.worker
 	$uzu:=cs:C1710.workers.worker.new(cs:C1710._server)

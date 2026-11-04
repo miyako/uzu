@@ -137,7 +137,8 @@ GitHub runners, secrets, Apple notarization and Pages deployment can only be ver
 
 `tests/4d/validate.4dm` is a native 4D regression method for catalog/repository IDs,
 existing local-folder delegation, the no-argument termination handle, a `Null`
-event, `onError` code 2 when nothing is downloaded and no local folder is given,
+event, `onError` code 2 when nothing is downloaded and no local folder is given
+or when starting with a nonexistent model folder,
 and locale-independent numeric arguments. To run
 it, copy `uzu/` into a disposable project directory, install the declared `tcp`,
 `workers` and `event` components in its `Components/`, copy the method into

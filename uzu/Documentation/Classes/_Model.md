@@ -34,7 +34,11 @@ path: they are delegated to Uzu and launched by the `start` method.
 ## start ()
 
 Launches at most once per instance; later calls are ignored (for example when
-the same file OID completes twice). Creates `cs.workers.worker` for `_server`, calls `start(port; options)` and then
+the same file OID completes twice). Refuses to launch when `options.model` is
+neither non-empty text nor an existing `4D.File`/`4D.Folder` (for example when
+the Hugging Face API was unreachable and the descriptor's local folder does not
+exist): it calls `event.onError` with code `2`, naming the path when one was
+given, instead of starting the server without `--model`. Otherwise creates `cs.workers.worker` for `_server`, calls `start(port; options)` and then
 fires `event.onSuccess`. This is a **launch notification**, not a readiness
 probe. It does not wait for model download or HTTP availability.
 

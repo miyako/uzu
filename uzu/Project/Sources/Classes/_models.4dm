@@ -5,6 +5,7 @@ property options : Object
 property event : cs:C1710.event.event
 property _onResponse : 4D:C1709.Function
 property offline : Boolean
+property _unresolved : Collection
 
 Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; $options : Object; $formula : 4D:C1709.Function; $event : cs:C1710.event.event)
 	
@@ -22,6 +23,7 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 	
 	This:C1470.files:=[]
 	This:C1470._models:=[]
+	This:C1470._unresolved:=[]
 	
 	ARRAY LONGINT:C221($pos; 0)
 	ARRAY LONGINT:C221($len; 0)
@@ -63,6 +65,7 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 					$REPO:=$components.shift()
 					$API:=["https://huggingface.co/api/models"; $USER; $REPO; "tree"; $BRANCH; "?recursive=true"].join("/")
 				Else 
+					This:C1470._unresolved.push($huggingface.URL+": unrecognized Hugging Face URL")
 					continue
 			End case 
 			var $request : 4D:C1709.HTTPRequest
@@ -90,6 +93,8 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 								oid: $1.value.oid; \
 								folder: $5}); $USER; $REPO; $BRANCH; $huggingface.folder; $huggingface.domain; $huggingface.name)
 							
+							var $queued : Integer
+							$queued:=This:C1470.files.length
 							For each ($file; $resources.query("type == :1 and path in :2"; "file"; $huggingface.paths))
 								//any file not in option is assumed to be the main model
 								var $option : Text
@@ -117,10 +122,14 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 									This:C1470.files.unshift($file)  //default: prepend
 								End if 
 							End for each 
+							If (This:C1470.files.length=$queued)
+								This:C1470._unresolved.push($huggingface.URL+": no file in the repository matches paths")
+							End if
 							This:C1470._models.push([$USER; $REPO].join("/"))
 						: (OB Instance of:C1731($huggingface.folder; 4D:C1709.File))
 							$file:=$request.response.body.query("path == :1"; $huggingface.name).first()
 							If ($file=Null:C1517)
+								This:C1470._unresolved.push($huggingface.URL+": "+$huggingface.name+" not found in the repository")
 								continue
 							End if 
 							$file.domain:=$huggingface.domain
@@ -131,8 +140,12 @@ Class constructor($port : Integer; $huggingfaces : cs:C1710.event.huggingfaces; 
 							$file.BRANCH:=$BRANCH
 							This:C1470.files.push($file)
 							This:C1470._models.push([$USER; $REPO].join("/"))
+						Else
+							This:C1470._unresolved.push($huggingface.URL+": folder must be a 4D.Folder or 4D.File")
 					End case 
 				End if 
+			Else
+				This:C1470._unresolved.push($huggingface.URL+": Hugging Face API returned HTTP "+String:C10($request.response.status))
 			End if 
 		End while 
 		

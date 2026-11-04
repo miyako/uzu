@@ -86,6 +86,9 @@ Function _onNothingToDownload()
 	If (OB Instance of:C1731(This:C1470.options.model; 4D:C1709.Folder))
 		$message+=": "+This:C1470.options.model.path
 	End if
+	If (This:C1470._unresolved.length#0)
+		$message+="; "+This:C1470._unresolved.join("; ")
+	End if
 	LOG EVENT:C667(Into 4D debug message:K38:5; "uzu: "+$message)
 	This:C1470._notifyError(cs:C1710.event.error.new(2; $message; cs:C1710.event.models.new()))
 
@@ -94,17 +97,17 @@ Function start()
 	If (This:C1470._started)
 		return
 	End if
-	//_server omits --model unless it is non-empty text or an existing file/folder
+	//uzu takes a model identifier or a complete model directory, never a single file
 	var $hasModel : Boolean
 	Case of
 		: (Value type:C1509(This:C1470.options.model)=Is text:K8:3)
 			$hasModel:=(This:C1470.options.model#"")
-		: (OB Instance of:C1731(This:C1470.options.model; 4D:C1709.Folder)) || (OB Instance of:C1731(This:C1470.options.model; 4D:C1709.File))
+		: (OB Instance of:C1731(This:C1470.options.model; 4D:C1709.Folder))
 			$hasModel:=This:C1470.options.model.exists
 	End case
 	If (Not:C34($hasModel))
 		var $message : Text
-		$message:="no model to load: options.model is missing or does not exist"
+		$message:="no model to load: options.model is not a model identifier or an existing folder"
 		If (OB Instance of:C1731(This:C1470.options.model; 4D:C1709.Folder)) || (OB Instance of:C1731(This:C1470.options.model; 4D:C1709.File))
 			$message+=": "+This:C1470.options.model.path
 		End if

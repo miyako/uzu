@@ -15,7 +15,7 @@
 
 `_models` is the download-and-startup orchestrator. A non-empty text `options.model` (catalog ID, repository ID or native directory path) or an existing `4D.Folder` delegates model resolution to the native CLI immediately. The legacy `offline` property means the component skips its own download queue; it does **not** guarantee network-free native startup.
 
-Otherwise it iterates `huggingfaces`, queries the Hugging Face API for file metadata (OID, size, path), and builds a `files` queue. If the API is unreachable it attempts the descriptor's local folder; if that folder does not exist, [`_Model`](_Model.md)`.start()` reports `onError` code `2` rather than launching without a model. Descriptors must provide a complete Uzu-compatible directory, not a GGUF file; native resolution is recommended.
+Otherwise it iterates `huggingfaces`, queries the Hugging Face API for file metadata (OID, size, path), and builds a `files` queue. Descriptors that resolve no file are recorded with the reason (unrecognized URL, HTTP status, named file not in the repository, no file matching `paths`, or a `folder` that is neither a `4D.Folder` nor a `4D.File`); [`_Model`](_Model.md) includes those reasons in the `onError` message when nothing is left to download. If the API is unreachable it attempts the descriptor's local folder; if that folder does not exist, [`_Model`](_Model.md)`.start()` reports `onError` code `2` rather than launching without a model. Descriptors must provide a complete Uzu-compatible directory, not a GGUF file; native resolution is recommended.
 
 URL formats accepted in `huggingface.URL`:
 

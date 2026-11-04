@@ -60,7 +60,8 @@ through `onError`. Missing model options are reported through `onError`, or the
 If legacy `huggingfaces` descriptors resolve no files (nothing to download),
 the server starts only when `options.model` is an existing local `4D.Folder`;
 otherwise `onError` receives code `2` (naming the folder path when one was
-given) and nothing is launched. The same applies when the Hugging Face API is
+given) and nothing is launched; the message lists why each descriptor was
+skipped, such as the HTTP status returned by Hugging Face. The same applies when the Hugging Face API is
 unreachable and the descriptor's local folder does not exist. The server is
 launched at most once per attempt. `event` may be `Null`; no callbacks are then delivered.
 

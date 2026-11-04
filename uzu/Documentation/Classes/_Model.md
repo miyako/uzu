@@ -23,9 +23,18 @@ directory. Calls the base method to remove the completed entry and starts once
 all files are available. The folder must contain a complete Uzu-compatible
 model; arbitrary GGUF files are not supported.
 
+## _onNothingToDownload ()
+
+Called by `download()` when legacy descriptors resolved no files. Calls
+`start()` only when `options.model` is an existing `4D.Folder`. Otherwise it
+calls `event.onError` with code `2` (naming the folder path when one was given)
+and does not launch. Identifier and existing-folder models never reach this
+path: they are delegated to Uzu and launched by the `start` method.
+
 ## start ()
 
-Creates `cs.workers.worker` for `_server`, calls `start(port; options)` and then
+Launches at most once per instance; later calls are ignored (for example when
+the same file OID completes twice). Creates `cs.workers.worker` for `_server`, calls `start(port; options)` and then
 fires `event.onSuccess`. This is a **launch notification**, not a readiness
 probe. It does not wait for model download or HTTP availability.
 

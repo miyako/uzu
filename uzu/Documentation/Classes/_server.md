@@ -15,7 +15,7 @@ to `_CLI_Controller.execute`.
 
 | Value | Command form |
 | --- | --- |
-| Number | `--flag value` |
+| Number | `--flag value` (always `.` as decimal separator, regardless of system locale) |
 | Text | `--flag escaped-value` |
 | Boolean true | `--flag` |
 | Existing 4D.File / 4D.Folder | `--flag escaped-path` |

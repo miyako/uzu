@@ -37,7 +37,7 @@ Called when the managed `SystemWorker` terminates. Looks up `onTerminate` on the
 
 ### Custom controller subclass
 
-To handle stdout while the server is running, create a subclass of `_uzu_Controller` and override `onData`:
+stdout/stderr are quiet by default on purpose: a long-running server can produce a large amount of output. If you do handle streams, keep the handler bounded (do not accumulate the data). A subclass of `_uzu_Controller` can override `onData`:
 
 ```4d
 // In your custom controller class (e.g. cs.uzu.MyController):
@@ -47,13 +47,15 @@ Function onData($worker : 4D.SystemWorker; $params : Object)
     LOG EVENT(Into 4D debug message; $params.data)
 ```
 
-Pass the custom controller class when directly constructing `_server`:
+`cs.uzu.uzu.new()` does not accept a controller and always uses the default `_uzu_Controller`. A custom controller is used only when you pass its class to `_server` yourself; `_uzu` accepts it when it extends `_uzu_Controller`:
 
 ```4d
+var $server : cs.uzu._server
 $server:=cs.uzu._server.new(cs.MyController)
-// _uzu automatically detects MyController extends _uzu_Controller
-// and uses it in place of the default
+$server.start($options)  // $options must already contain model, port, etc.
 ```
+
+This bypasses the facade's port check and legacy Hugging Face downloads.
 
 ## See also
 

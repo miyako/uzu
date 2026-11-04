@@ -7,9 +7,9 @@
 | --- | --- | --- | --- |
 | port | Integer | -> | Port stored in `options.port` |
 | huggingfaces | cs.event.huggingfaces | -> | One or more Hugging Face model descriptors |
-| options | Object | -> | Server options object (mutated to add `port`, `onTerminate`, `onStdErr`, `onStdOut`) |
+| options | Object | -> | Server options object (mutated to add `port`; when `event` is not `Null`, also `onTerminate`, `onStdErr`, `onStdOut`) |
 | formula | 4D.Function | -> | Internal response callback forwarded to the download helper |
-| event | cs.event.event | -> | Callback functions |
+| event | cs.event.event | -> | Callback functions, or `Null` for no callbacks |
 
 ## Description
 
@@ -38,7 +38,7 @@ URL formats accepted in `huggingface.URL`:
 
 #### download ()
 
-Iterates `files`. For each file that is already present on disk with the correct size, `onDownload` is called immediately (skipping the HTTP fetch). Otherwise a `cs.event.download` is created to fetch the file from Hugging Face.
+If `files` is empty (nothing to download), calls `_onNothingToDownload()` instead and returns. Otherwise iterates `files`. For each file that is already present on disk with the correct size, `onDownload` is called immediately (skipping the HTTP fetch). Otherwise a `cs.event.download` is created to fetch the file from Hugging Face.
 
 #### onDownload (oid : Text)
 
@@ -48,15 +48,23 @@ Iterates `files`. For each file that is already present on disk with the correct
 
 Removes the completed file from `files`. When `files` is empty (all downloads done) it calls `start()`.
 
+#### _onNothingToDownload () *(virtual)*
+
+Called by `download()` when there are no files to download. The base implementation calls `start()`. Overridden in [`_Model`](_Model.md).
+
+#### _notifyError (error : cs.event.error)
+
+Calls `event.onError` with receiver `This` and arguments `(options; error)` when `event` is not `Null` and `onError` is a function; otherwise does nothing.
+
 #### models () → cs.event.models *(virtual)*
 
 Returns a `cs.event.models` instance describing the loaded models. The base implementation returns an empty collection. Overridden in [`_Model`](_Model.md).
 
 #### start () *(virtual)*
 
-Called automatically when all downloads complete. The base implementation is a no-op. Overridden in [`_Model`](_Model.md) to launch the server.
+Called automatically when all downloads complete (or by `_onNothingToDownload()`). The base implementation is a no-op. Overridden in [`_Model`](_Model.md) to launch the server.
 
 ## See also
 
-- [`_Model`](_Model.md) — concrete subclass that overrides `models()` and `start()`
+- [`_Model`](_Model.md) — concrete subclass that overrides `models()`, `onDownload()`, `_onNothingToDownload()` and `start()`
 - [`uzu`](uzu.md) — the public entry point

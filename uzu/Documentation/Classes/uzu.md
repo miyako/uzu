@@ -57,12 +57,20 @@ for the same port. The TCP preflight reports another process occupying the port
 through `onError`. Missing model options are reported through `onError`, or the
 4D debug log if no event object is provided.
 
+If legacy `huggingfaces` descriptors resolve no files (nothing to download),
+the server starts only when `options.model` is an existing local `4D.Folder`;
+otherwise `onError` receives code `2` (naming the folder path when one was
+given) and nothing is launched. The server is launched at most once per
+attempt. `event` may be `Null`; no callbacks are then delivered.
+
 `onSuccess(options; models)` currently signals **worker launch**, not HTTP
 readiness. Model loading/download may still be running; poll `/v1/models`.
 For identifier models, the event's model list is a placeholder rather than a
 native catalog response. `onData`/`onResponse` refer to component-managed file
 downloads, not Uzu's own internal downloads. `onTerminate(worker; params)` reports
-process exit.
+process exit. The server's stdout/stderr are intentionally not forwarded
+(`onStdOut`/`onStdErr` are not bound): a long-running server can produce a
+large amount of output.
 
 To terminate (including from `onExit`):
 
